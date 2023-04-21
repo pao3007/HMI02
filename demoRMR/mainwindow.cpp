@@ -12,6 +12,7 @@
 
 
 MainWindow::MainWindow(QWidget *parent) :
+
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
@@ -30,13 +31,19 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     datacounter=0;
+    this->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    connect(this, SIGNAL(customContextMenuRequested(QPoint)),
+            this, SLOT(ShowContextMenu(QPoint)));
 
 
 }
 
 MainWindow::~MainWindow()
 {
+
     delete ui;
+
 }
 
 void MainWindow::paintEvent(QPaintEvent *event)
@@ -101,7 +108,6 @@ void MainWindow::paintEvent(QPaintEvent *event)
 
     if(actIndex>-1)/// ak zobrazujem data z kamery a aspon niektory frame vo vectore je naplneny
     {
-        std::cout<<actIndex<<std::endl;
         QImage image = QImage((uchar*)frame[actIndex].data, frame[actIndex].cols, frame[actIndex].rows, frame[actIndex].step, QImage::Format_RGB888  );//kopirovanie cvmat do qimage
         if(pushBtnImg){
             painter.drawImage(rectMini,image.rgbSwapped());
@@ -256,3 +262,27 @@ void MainWindow::getNewFrame()
 {
 
 }
+
+void MainWindow::test(){
+    //std::cout<<"x:"<<pos.x()<<" y:"<<pos.y()<<std::endl;
+    std::cout<<"test"<<std::endl;
+}
+
+void MainWindow::ShowContextMenu(const QPoint &pos)
+{
+   QMenu contextMenu(tr("Context menu"), this);
+
+   QAction action1("Chod sem", this);
+   QAction action2("Hladaj tu", this);
+   connect(&action1, SIGNAL(triggered()), this, SLOT(test()));
+   connect(&action2, SIGNAL(triggered()), this, SLOT(test()));
+   contextMenu.addAction(&action1);
+   contextMenu.addAction(&action2);
+   std::cout<<"x:"<<pos.x()<<" y:"<<pos.y()<<std::endl;
+
+
+   contextMenu.exec(mapToGlobal(pos));
+}
+
+
+

@@ -31,6 +31,7 @@ namespace Ui {
 class MainWindow;
 }
 
+
 ///toto je trieda s oknom.. ktora sa spusti ked sa spusti aplikacia.. su tu vsetky gombiky a spustania...
 class MainWindow : public QMainWindow
 {
@@ -53,6 +54,8 @@ public:
 
 int processThisCamera(cv::Mat cameraData);
 
+
+
 private slots:
     void on_pushButton_9_clicked();
 
@@ -70,6 +73,8 @@ private slots:
 
     void on_pushButton_clicked();
     void getNewFrame();
+    void ShowContextMenu(const QPoint &pos);
+
 
 private:
 
@@ -91,10 +96,12 @@ private:
      double rotationspeed;//omega/s
 public slots:
      void setUiValues(double robotX,double robotY,double robotFi);
+     void test();
 signals:
      void uiValuesChanged(double newrobotX,double newrobotY,double newrobotFi); ///toto nema telo
 
 
 };
+
 
 #endif // MAINWINDOW_H
