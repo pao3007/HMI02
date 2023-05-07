@@ -12,7 +12,6 @@
 
 
 MainWindow::MainWindow(QWidget *parent) :
-
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
@@ -31,6 +30,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     datacounter=0;
+
     this->setContextMenuPolicy(Qt::CustomContextMenu);
 
     connect(this, SIGNAL(customContextMenuRequested(QPoint)),
@@ -41,9 +41,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-
     delete ui;
-
 }
 
 void MainWindow::paintEvent(QPaintEvent *event)
@@ -105,13 +103,24 @@ void MainWindow::paintEvent(QPaintEvent *event)
 
     previousHeight = size.height();
     previousWidth = size.width();
+    sizeG = ui->frame->size();
+
+
 
     if(actIndex>-1)/// ak zobrazujem data z kamery a aspon niektory frame vo vectore je naplneny
     {
         QImage image = QImage((uchar*)frame[actIndex].data, frame[actIndex].cols, frame[actIndex].rows, frame[actIndex].step, QImage::Format_RGB888  );//kopirovanie cvmat do qimage
         if(pushBtnImg){
+
+            painter.drawImage(rect,mapaImage);
             painter.drawImage(rectMini,image.rgbSwapped());
-        }else painter.drawImage(rect,image.rgbSwapped());
+
+        }else
+        {
+
+            painter.drawImage(rect,image.rgbSwapped());
+            painter.drawImage(rectMini,mapaImage);
+        }
 
     }
 
@@ -123,9 +132,7 @@ void MainWindow::paintEvent(QPaintEvent *event)
 /// prepojenie signal slot je vo funkcii  on_pushButton_9_clicked
 void  MainWindow::setUiValues(double robotX,double robotY,double robotFi)
 {
-     ui->lineEdit_2->setText(QString::number(robotX));
-     ui->lineEdit_3->setText(QString::number(robotY));
-     ui->lineEdit_4->setText(QString::number(robotFi));
+
 }
 
 ///toto je calback na data z robota, ktory ste podhodili robotu vo funkcii on_pushButton_9_clicked
@@ -198,6 +205,76 @@ void MainWindow::on_pushButton_9_clicked() //start button
         [this]( const int js, const int axis, const qreal value) { if(/*js==0 &&*/ axis==1){forwardspeed=-value*300;}
             if(/*js==0 &&*/ axis==0){rotationspeed=-value*(3.14159/2.0);}}
     );
+///////////////////////////////////////////////////////////////////////////////
+    std::string eachrow;
+    std::ifstream myfile("C:\\Users\\lukac\\Desktop\\HMI02\\idealOccGrid2.txt");
+    int x = 0, y = 0, check = 0;
+
+
+    while (std::getline(myfile, eachrow))
+    {
+       std::vector<char> row;
+
+       for (char &x : eachrow)
+       {
+           if (x != ' ')row.push_back(x);
+           if(x == '1')check++;
+       }
+        if(check > 0)
+        {
+            mapa.push_back(row);
+            cout << "idem" << endl;
+        }
+        check = 0;
+
+    }
+    scale = 3;
+    scale2 = 2;
+    offset = 50;
+
+    mapaImage = QImage(mapa[1].size() * scale,mapa.size() * scale + offset, QImage::Format_RGBA64);
+    mapaImage.fill(Qt::white);
+    QPainter painterMap(&mapaImage);
+
+    std::vector< std::vector<int> >::const_iterator row;
+    std::vector<int>::const_iterator col;
+    QPen pero;
+    pero.setStyle(Qt::SolidLine);//styl pera - plna ciara
+    pero.setWidth(5);//hrubka pera -3pixely
+    pero.setColor(Qt::black);//farba je zelena
+    painterMap.setPen(pero);
+
+    int j,i;
+
+
+    for (i = 0; i < mapa.size(); i++)
+       {
+           for (j = 0; j < mapa[i].size(); j++)
+           {
+               if(mapa[i][j] == '1'){
+                   pero.setStyle(Qt::SolidLine);//styl pera - plna ciara
+                   pero.setWidth(5);//hrubka pera -3pixely
+                   pero.setColor(Qt::black);//farba je zelena
+                   painterMap.setPen(pero);
+                   painterMap.drawPoint(j * scale,i * scale2 + offset);
+               }else{
+                   pero.setStyle(Qt::SolidLine);//styl pera - plna ciara
+                   pero.setWidth(5);//hrubka pera -3pixely
+                   pero.setColor(Qt::white);//farba je zelena
+                   painterMap.setPen(pero);
+                   painterMap.drawPoint(j * scale,i * scale2 + offset);
+               }
+
+           }
+
+       }
+
+//////////////////////////
+
+
+
+
+
 }
 
 void MainWindow::on_pushButton_2_clicked() //forward
@@ -236,6 +313,7 @@ void MainWindow::on_pushButton_image_clicked() //stop
     if(pushBtnImg){
         pushBtnImg = false;
     }else pushBtnImg = true;
+    update();
 
 }
 
@@ -244,18 +322,7 @@ void MainWindow::on_pushButton_image_clicked() //stop
 
 void MainWindow::on_pushButton_clicked()
 {
-    if(useCamera1==true)
-    {
-        useCamera1=false;
 
-        ui->pushButton->setText("use camera");
-    }
-    else
-    {
-        useCamera1=true;
-
-        ui->pushButton->setText("use laser");
-    }
 }
 
 void MainWindow::getNewFrame()
@@ -270,19 +337,77 @@ void MainWindow::test(){
 
 void MainWindow::ShowContextMenu(const QPoint &pos)
 {
-   QMenu contextMenu(tr("Context menu"), this);
+    if(pushBtnImg){
+        QMenu contextMenu(tr("Context menu"), this);
 
-   QAction action1("Chod sem", this);
-   QAction action2("Hladaj tu", this);
-   connect(&action1, SIGNAL(triggered()), this, SLOT(test()));
-   connect(&action2, SIGNAL(triggered()), this, SLOT(test()));
-   contextMenu.addAction(&action1);
-   contextMenu.addAction(&action2);
-   std::cout<<"x:"<<pos.x()<<" y:"<<pos.y()<<std::endl;
+        QAction action1("Chod sem", this);
+        QAction action2("Hladaj tu", this);
+        connect(&action1, SIGNAL(triggered()), this, SLOT(test()));
+        connect(&action2, SIGNAL(triggered()), this, SLOT(test()));
+        contextMenu.addAction(&action1);
+        contextMenu.addAction(&action2);
+        ///std::cout<<"x:"<<pos.x()<<" y:"<<pos.y()<<" size:"<<mapaImage.width()<<"x"<< mapaImage.height()<<std::endl;
+        contextMenu.exec(mapToGlobal(pos));
+
+        if(1){
+            float pomerW = float(mapaImage.width())/float(sizeG.width());
+            float pomerH = float(mapaImage.height())/float(sizeG.height());
+
+            int drawPx = int(pomerW * float(pos.x()-10));
+            int drawPy = int(pomerH * float(pos.y()-25));
+            ///std::cout<<"dP: "<<drawPx<<":"<<drawPy<<std::endl;
+
+            QPainter painterMap(&mapaImage);
+            QPen pero;
+            pero.setStyle(Qt::SolidLine);//styl pera - plna ciara
+            pero.setWidth(5);//hrubka pera -3pixely
+            pero.setColor(Qt::green);//farba je zelena
+            painterMap.setPen(pero);
+
+            int x = int(float(drawPx)/float(scale));
+            int y = int((float(drawPy)/float(scale2)));
+            int ok = 0;
+            int i = 1;
+            std::cout<<"x:"<<mapa[0].size()<<"y:"<<mapa.size()<<std::endl;
+            /*while((x-i) >= 0){
+                if(mapa[y][x-i] == '1'){
+                    ok++;
+                    break;
+                }
+                i++;
+            }
+            i = 1;
+            while((x+i) < 300){
+                if(mapa[y][x+i] == '1'){
+                    ok++;
+                    break;
+                }
+                i++;
+            }
+            i = 1;
+            while((y-i) >= 0){
+                if(mapa[y-i][x] == '1'){
+                    ok++;
+                    break;
+                }
+                i++;
+            }
+            i = 1;
+            while((y+i) < 300){
+                if(mapa[y+i][x] == '1'){
+                    ok++;
+                    break;
+                }
+                i++;
+            }
+            if(ok == 4)*/{
+
+                painterMap.drawEllipse(drawPx,drawPy,5,3);
+                update();
+            }
+        }
 
 
-   contextMenu.exec(mapToGlobal(pos));
+    }
+
 }
-
-
-

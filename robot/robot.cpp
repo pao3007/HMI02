@@ -262,7 +262,6 @@ void Robot::imageViewer()
 
 
 
-
       // tu sa vola callback..
         std::async(std::launch::async, [this](cv::Mat camdata) { camera_callback(camdata.clone()); },frameBuf);
 #ifdef _WIN32

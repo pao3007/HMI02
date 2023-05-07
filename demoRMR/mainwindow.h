@@ -31,7 +31,6 @@ namespace Ui {
 class MainWindow;
 }
 
-
 ///toto je trieda s oknom.. ktora sa spusti ked sa spusti aplikacia.. su tu vsetky gombiky a spustania...
 class MainWindow : public QMainWindow
 {
@@ -54,8 +53,6 @@ public:
 
 int processThisCamera(cv::Mat cameraData);
 
-
-
 private slots:
     void on_pushButton_9_clicked();
 
@@ -75,7 +72,6 @@ private slots:
     void getNewFrame();
     void ShowContextMenu(const QPoint &pos);
 
-
 private:
 
     //--skuste tu nic nevymazat... pridavajte co chcete, ale pri odoberani by sa mohol stat nejaky drobny problem, co bude vyhadzovat chyby
@@ -89,6 +85,10 @@ private:
      int datacounter;
      bool pushBtnImg;
      QTimer *timer;
+     std::vector<std::vector<char>> mapa;
+     QImage mapaImage;
+     QSize sizeG;
+     int scale,scale2, offset;
 
      QJoysticks *instance;
 
@@ -102,6 +102,5 @@ signals:
 
 
 };
-
 
 #endif // MAINWINDOW_H
