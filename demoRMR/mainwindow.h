@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QTimer>
+#include <queue>
 #ifdef _WIN32
 #include<windows.h>
 #endif
@@ -27,6 +28,49 @@
 #include "robot.h"
 
 #include <QJoysticks.h>
+
+typedef struct
+{
+
+    int x;
+    int y;
+    int drawX;
+    int drawY;
+
+}Index;
+
+typedef struct
+{
+
+    bool hladaj;
+    int x;
+    int y;
+    int drawX;
+    int drawY;
+
+}Uloha;
+
+typedef struct
+{
+
+    float x;
+    float y;
+    float angle;
+    int translation;
+    int numberOfScans;
+    //MojeLaserData Data[1000];
+    bool stop;
+    bool moving;
+    int numOfPoints;
+
+}MojRobot;
+
+typedef struct
+{
+    queue<Index> unvisited;
+    Index current;
+}Alg;
+
 namespace Ui {
 class MainWindow;
 }
@@ -58,6 +102,8 @@ private slots:
 
     void on_pushButton_2_clicked();
 
+    void on_pushButton_rem_clicked();
+
     void on_pushButton_3_clicked();
 
     void on_pushButton_6_clicked();
@@ -83,24 +129,46 @@ private:
      Robot robot;
      TKobukiData robotdata;
      int datacounter;
-     bool pushBtnImg;
+     bool pushBtnImg,start,start_stop, navigujem, novaTrasa, pause;
      QTimer *timer;
-     std::vector<std::vector<char>> mapa;
-     QImage mapaImage;
+     std::vector<std::vector<char>> mapaOrig;
+     QImage mapaImageOrig;
      QSize sizeG;
-     int scale,scale2, offset;
+     int scale,scale2, offsetImg;
+     Index suradnice, polohaRobota, zaciatok, mapSize;
+     std::vector<Uloha> ulohy;
+     QImage image;
+
+     vector<Index> path;
+     vector<Index> pathPoints;
+     float odchylka_pol;
+
 
      QJoysticks *instance;
+      MojRobot mojRobot;
 
+     int offset[8][2] = {
+         {1, 0},
+         {0, 1},
+         {-1, 0},
+         {0, -1},
+         {-1, -1},
+         {-1, 1},
+         {1, -1},
+         {1, 1}
+                                              };
      double forwardspeed;//mm/s
      double rotationspeed;//omega/s
 public slots:
      void setUiValues(double robotX,double robotY,double robotFi);
-     void test();
+     void chod();
+     void hladaj();
 signals:
      void uiValuesChanged(double newrobotX,double newrobotY,double newrobotFi); ///toto nema telo
 
 
 };
+
+
 
 #endif // MAINWINDOW_H
