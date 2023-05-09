@@ -18,7 +18,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
 
     //tu je napevno nastavena ip. treba zmenit na to co ste si zadali do text boxu alebo nejaku inu pevnu. co bude spravna
-    ipaddress="127.0.0.1";//192.168.1.11toto je na niektory realny robot.. na lokal budete davat "127.0.0.1"
+    //ipaddress="127.0.0.1";
+    ipaddress="192.168.1.14";//192.168.1.11toto je na niektory realny robot.. na lokal budete davat "127.0.0.1"
   //  cap.open("http://192.168.1.11:8000/stream.mjpg");
     ui->setupUi(this);
     datacounter=0;
@@ -169,6 +170,7 @@ void MainWindow::paintEvent(QPaintEvent *event)
         QColor color0 = Qt::black;
 
         if(pushBtnImg){
+            ///cout << "Mapa" << endl;
             color0 = Qt::white;
             painter.drawImage(rect,mapaImage);
             painter.drawImage(rectMini,image.rgbSwapped());
@@ -177,6 +179,7 @@ void MainWindow::paintEvent(QPaintEvent *event)
 
         }else
         {
+            ///cout << "Kamera" << endl;
             color0 = Qt::black;
             painter.drawImage(rect,image.rgbSwapped());
             painter.drawImage(rectMini,mapaImage);
@@ -184,13 +187,20 @@ void MainWindow::paintEvent(QPaintEvent *event)
 
         }
         //15,ui->frame->pos().y()+20,ui->frame->geometry().width()/4,ui->frame->geometry().height()/4
+            pero.setStyle(Qt::SolidLine);//styl pera - plna ciara
+            pero.setWidth(5);//hrubka pera -3pixely
+            pero.setColor(color0);//farba je zelena
+            painter.setPen(pero);
+            QColor farba = Qt::black;
+            farba.setAlpha(0);
+            painter.setBrush(farba);
 
-            painter.fillRect(22,size.height()-90-47,50,100,color0);
+            painter.drawRect(22,size.height()-90-47,50,100);
 
 
 
-
-            painter.fillRect(27,size.height()-85-47,40,90,Qt::green);
+            float batteryLevel = 0.5;
+            painter.fillRect(27,size.height()-85-47+90*(1-batteryLevel),40,90*batteryLevel,Qt::green);
 
             pero.setStyle(Qt::SolidLine);//styl pera - plna ciara
             pero.setWidth(5);//hrubka pera -3pixely
@@ -201,17 +211,19 @@ void MainWindow::paintEvent(QPaintEvent *event)
             help = size.height()-106;
             painter.drawLine(24,help,67,help);
 
-            /*help = size.height()-70;
-            QString s = "C";
-            unsigned short i = robotdata.Battery;
-            s.append(char(i+'/0'));
-            painter.drawText(30,help,s);*/
+            help = size.height()-80;
+            QString s = "";
+            s.append(char(robotdata.Battery));
+            s.append("%");
+            painter.drawText(40,help,s);
+
 
 
 
 
 
     }
+
 
 
 
@@ -231,6 +243,8 @@ void  MainWindow::setUiValues(double robotX,double robotY,double robotFi)
 /// vola sa vzdy ked dojdu nove data z robota. nemusite nic riesit, proste sa to stane
 int MainWindow::processThisRobot(TKobukiData robotdata)
 {
+    cout << int(robotdata.Battery) << endl;
+
     static bool start = true;
     static int previousEncoderLeft = robotdata.EncoderLeft, previousEncoderRight = robotdata.EncoderRight;
     ///static double odometerLeft, odometerRight = 0;
@@ -269,7 +283,7 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
                     std::vector<int>(mapaOrig[0].size()));
         std::vector<std::vector<char>> mapa = mapaOrig;
 
-        for(int k = 0; k < 4; k++){
+        for(int k = 0; k < 6; k++){
             int i = 0;
             int j = 0;
                 for (i=0; i < mapa[0].size(); i++)
@@ -487,10 +501,10 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
 
 
         //////////////////
-        ///ofstream occGridALG("C:/Users/lukac/Desktop/RMR/RMR2023/uloha4/occGridALG.txt");
-        ///ofstream occGridALG2("C:/Users/lukac/Desktop/RMR/RMR2023/uloha4/occGridALG2.txt");
-        ofstream occGridALG("C:/Users/pao/Desktop/HMI/HMI02/HMI02/occGridALG.txt");
-        ofstream occGridALG2("C:/Users/pao/Desktop/HMI/HMI02/HMI02/occGridALG2.txt");
+        ofstream occGridALG("C:/Users/lukac/Desktop/HMI/HMI02/occGridALG.txt");
+        ofstream occGridALG2("C:/Users/lukac/Desktop/HMI/HMI02/occGridALG2.txt");
+        ///ofstream occGridALG("C:/Users/pao/Desktop/HMI/HMI02/HMI02/occGridALG.txt");
+        ///ofstream occGridALG2("C:/Users/pao/Desktop/HMI/HMI02/HMI02/occGridALG2.txt");
         printf("Zapisujem do mapy");
 
         for (int i = 0; i < mapa[0].size(); i++) {
@@ -763,14 +777,14 @@ int MainWindow::processThisLidar(LaserMeasurement laserData)
     int i = 0;
     for(int k=0;k<copyOfLaserData.numberOfScans;k++){
 
-        if(((copyOfLaserData.Data[k].scanDistance/1000) < 0.23) && (copyOfLaserData.Data[k].scanDistance/1000) != 0 && (k < 50 || k > 225))i++;
+        ///if(((copyOfLaserData.Data[k].scanDistance/1000) < 0.23) && (copyOfLaserData.Data[k].scanDistance/1000) != 0 && (k < 50 || k > 225))i++;
        ///if(copyOfLaserData.Data[k].scanAngle > 88 && copyOfLaserData.Data[k].scanAngle < 92) cout << copyOfLaserData.Data[k].scanDistance/1000 << endl;
     }
     if(i > 0){
         mojRobot.stop = true;
     }else mojRobot.stop = false;
 
-    update();//tento prikaz prinuti prekreslit obrazovku.. zavola sa paintEvent funkcia
+    //update();//tento prikaz prinuti prekreslit obrazovku.. zavola sa paintEvent funkcia
 
 
     return 0;
@@ -785,11 +799,12 @@ int MainWindow::processThisCamera(cv::Mat cameraData)
     cameraData.copyTo(frame[(actIndex+1)%3]);//kopirujem do nasej strukury
     actIndex=(actIndex+1)%3;//aktualizujem kde je nova fotka
     updateLaserPicture=1;
+    update();
     return 0;
 }
 void MainWindow::on_pushButton_9_clicked() //start button
 {
-
+        static bool start = false;
     if(!start){
         polohaRobota.x = 100;
         polohaRobota.y = 8;
@@ -805,7 +820,7 @@ void MainWindow::on_pushButton_9_clicked() //start button
         robot.setLaserParameters(ipaddress,52999,5299,/*[](LaserMeasurement dat)->int{std::cout<<"som z lambdy callback"<<std::endl;return 0;}*/std::bind(&MainWindow::processThisLidar,this,std::placeholders::_1));
         robot.setRobotParameters(ipaddress,53000,5300,std::bind(&MainWindow::processThisRobot,this,std::placeholders::_1));
         //---simulator ma port 8889, realny robot 8000
-        robot.setCameraParameters("http://"+ipaddress+":8889/stream.mjpg",std::bind(&MainWindow::processThisCamera,this,std::placeholders::_1));
+        robot.setCameraParameters("http://"+ipaddress+":8000/stream.mjpg",std::bind(&MainWindow::processThisCamera,this,std::placeholders::_1));
 
         ///ked je vsetko nasetovane tak to tento prikaz spusti (ak nieco nieje setnute,tak to normalne nenastavi.cize ak napr nechcete kameru,vklude vsetky info o nej vymazte)
         robot.robotStart();
@@ -825,8 +840,8 @@ void MainWindow::on_pushButton_9_clicked() //start button
         );
     ///////////////////////////////////////////////////////////////////////////////
         std::string eachrow;
-        ///std::ifstream myfile("C:\\Users\\lukac\\Desktop\\HMI02\\idealOccGrid2.txt");
-        std::ifstream myfile("C:\\Users\\pao\\Desktop\\HMI\\HMI02\\HMI02\\idealOccGrid2.txt");
+        std::ifstream myfile("C:/Users/lukac/Desktop/HMI/HMI02/idealOccGrid2.txt");
+        ///std::ifstream myfile("C:\\Users\\pao\\Desktop\\HMI\\HMI02\\HMI02\\idealOccGrid2.txt");
         int check = 0;
 
 

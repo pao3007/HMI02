@@ -129,7 +129,7 @@ private:
      Robot robot;
      TKobukiData robotdata;
      int datacounter;
-     bool pushBtnImg,start,start_stop, navigujem, novaTrasa, pause;
+     bool pushBtnImg,start_stop, navigujem, novaTrasa, pause;
      QTimer *timer;
      std::vector<std::vector<char>> mapaOrig;
      QImage mapaImageOrig;
