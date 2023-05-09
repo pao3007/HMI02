@@ -46,6 +46,90 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
+//---------moj kod pre funkcie pouzivane pre hladanie kruhu-----------------------//
+
+void MainWindow::startSearching(){
+    search=true;
+    finder=true;
+}
+
+cv::Mat MainWindow::detectCircle(cv::Mat image)
+{
+    cout << "zavolala sa funkcia na detekciu";
+    cv::Mat gray;
+    cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+    medianBlur(gray, gray, 5);
+    vector<cv::Vec3f> circles;
+    HoughCircles(gray, circles, cv::HOUGH_GRADIENT_ALT, 1, gray.rows/16, 90, 0.9, 20, 100);
+
+    for( size_t i = 0; i < circles.size(); i++ ){
+        cv::Vec3i c = circles[i];
+        cv::Point center = cv::Point(c[0], c[1]);
+
+        // circle center
+        cv::circle( image, center, 1,cv::Scalar(0,100,100), 3, cv::LINE_AA);
+        // circle outline
+        int radius = c[2];
+        cv::circle( image, center, radius, cv::Scalar(0,0,255), 5, cv::LINE_AA);
+        std::cout << c[0] << c[1] << c[2] <<"mamkruh\n\n";
+        pole[0]=c[0];//x
+        pole[1]=c[1];//y
+        pole[2] = 1;
+    }
+return image;
+}
+
+QPoint MainWindow::findObject(){
+    cout<<"zavolala sa funkcia na detekciu ";
+    QPoint point2;
+    convert=true;
+    if(pole[2]==1){
+        detectCircle(newImage);
+        int pointX = pole[0];
+        int highX = pointX+10;
+        int lowX = pointX-10;
+        int highAngle = highX*0.07;
+        int lowAngle = lowX*0.07;
+        if(highAngle>426*0.07){
+            highAngle=360-(highAngle-426*0.07);
+        }
+        if(lowAngle>426*0.07){
+            lowAngle=360-(lowAngle-426*0.07);
+        }
+
+        int angle;
+        //int point = 853/64;
+        for(int k=0;k<copyOfLaserData.numberOfScans/*360*/;k++){
+            angle = copyOfLaserData.Data[k].scanAngle;
+            if(angle<highAngle && angle>lowAngle){
+                float angle2 = angle;
+                float dist = copyOfLaserData.Data[k].scanDistance + 90;
+
+                xObject = dist*cos(angle2);
+                yObject = dist*sin(angle2);
+                cout<<"Vzdialenost v mm = "<<dist<<" x = "<<xObject<<" y = "<<yObject<<endl;
+            }
+        }
+        point2.setX(xObject);
+        point2.setY(yObject);
+    }else{
+        point2.isNull();
+        cout<<"nenasiel objekt";
+    }
+
+    return point2;
+}
+
+int MainWindow::checkAngle(int gyroAngle){
+    int checkAngle;
+    if(gyroAngle<0){
+        checkAngle = gyroAngle+36000;
+    }else{
+        checkAngle = gyroAngle;
+    }
+    return checkAngle/100;
+}
+//---------koniec mojho kodu-----------------------------------------------------//
 
 void MainWindow::paintEvent(QPaintEvent *event)
 {
@@ -53,6 +137,15 @@ void MainWindow::paintEvent(QPaintEvent *event)
     QSize size = this->size();
     static int previousHeight = 0;
     static int previousWidth = 0;
+
+    //---------moj kod kde beriem obraz s kameri a hladam na nom kruh----------------//
+    QImage image = QImage((uchar*)frame[actIndex].data, frame[actIndex].cols, frame[actIndex].rows, frame[actIndex].step, QImage::Format_RGB888  );//kopirovanie cvmat do qimage
+    QImage im2 = image;
+    if(convert){
+    cv::Mat ni(image.height(), image.width(), CV_8UC3, (cv::Scalar*)image.scanLine(0));
+    newImage = ni;
+    }
+    //---------koniec mojho kodu-----------------------------------------------------//
     ///prekreslujem obrazovku len vtedy, ked viem ze mam nove data. paintevent sa
     /// moze pochopitelne zavolat aj z inych dovodov, napriklad zmena velkosti okna
     painter.setBrush(Qt::black);//cierna farba pozadia(pouziva sa ako fill pre napriklad funkciu drawRect)
@@ -244,6 +337,93 @@ void  MainWindow::setUiValues(double robotX,double robotY,double robotFi)
 int MainWindow::processThisRobot(TKobukiData robotdata)
 {
     cout << int(robotdata.Battery) << endl;
+
+    //---------moj kod pre prehladavanie priestoru-------------------------//
+    //spusta sa pomocou funkcie startSearching() funkciu je potrebne zavolat
+    //vzdy ked robot dosiahne bod v ktorom prehladava priestor.
+
+    //po spusteni netreba riesit nic dalej
+
+    //pokial najde kruh jeho suradnice zaznaci do globalenj premennej objectPoint()
+    //k suradniciam objektu je potrebne priratat x-ovu a y-ovu poziciu robota
+    //pokial ju chceme zakreslit do mapy
+
+    if(search){
+
+            int inigyro = checkAngle(robotdata.GyroAngle);
+
+            if(inigyro<180){
+                robot.setRotationSpeed(-0.2);
+            }else{
+                robot.setRotationSpeed(0.2);
+            }
+
+            if(finder&&(checkAngle(robotdata.GyroAngle)<2||checkAngle(robotdata.GyroAngle)>358)){
+                robot.setRotationSpeed(0);
+                objectPoint = findObject();
+                finder=false;
+
+            }else if(!finder&&iter==0){
+                robot.setRotationSpeed(0.5);
+                cout<<"\n som v kroku "<<iter;
+                if(checkAngle(robotdata.GyroAngle)>62&&checkAngle(robotdata.GyroAngle)<66){
+                    robot.setRotationSpeed(0);
+                    objectPoint = findObject();
+                    iter = 1;
+                }
+            }else if(!finder&&iter==1){
+                robot.setRotationSpeed(0.5);
+                cout<<"\n som v kroku "<<iter;
+                if(checkAngle(robotdata.GyroAngle)>126&&checkAngle(robotdata.GyroAngle)<130){
+                    robot.setRotationSpeed(0);
+                    objectPoint = findObject();
+                    iter = 2;
+                }
+            }else if(!finder&&iter==2){
+                robot.setRotationSpeed(0.5);
+                cout<<"\n som v kroku "<<iter;
+                if(checkAngle(robotdata.GyroAngle)>190&&checkAngle(robotdata.GyroAngle)<192){
+                    robot.setRotationSpeed(0);
+                    objectPoint = findObject();
+                    iter = 3;
+                }
+            }else if(!finder&&iter==3){
+                robot.setRotationSpeed(0.2);
+                cout<<"\n som v kroku "<<iter;
+                if(checkAngle(robotdata.GyroAngle)>254&&checkAngle(robotdata.GyroAngle)<258){
+                    robot.setRotationSpeed(0);
+                    objectPoint = findObject();
+                    iter = 4;
+                }
+            }else if(!finder&&iter==4){
+                robot.setRotationSpeed(0.5);
+                cout<<"\n som v kroku "<<iter;
+                if(checkAngle(robotdata.GyroAngle)>318&&checkAngle(robotdata.GyroAngle)<322){
+                    robot.setRotationSpeed(0);
+                    objectPoint = findObject();
+                    iter = 5;
+                }
+            }else if(!finder&&iter==5){
+                robot.setRotationSpeed(0.5);
+                cout<<"\n som v kroku "<<iter;
+                if(checkAngle(robotdata.GyroAngle)>22&&checkAngle(robotdata.GyroAngle)<26){
+                    robot.setRotationSpeed(0);
+                    objectPoint = findObject();
+                    iter = 0;
+                    search = false;
+                }
+
+            }
+            cout<<endl<<search;
+            if(!search){
+                robot.setRotationSpeed(0);
+            }
+
+        }
+    //vyssie uvedena funkcionalita bude realizovana iba pokial je zavolana funkcia start search
+    //bolo by dobre asi zvysok kodu nastavit tak ze pokial tam mas nejake procesy ktore sa deju stale
+    //tak ked sa ma diat proces hladania ostatne by sa mali vypnut aby sa tam nebil ten pohyb robota
+    //-------------koniec mojho kodu------------------------------------------------------------------//
 
     static bool start = true;
     static int previousEncoderLeft = robotdata.EncoderLeft, previousEncoderRight = robotdata.EncoderRight;

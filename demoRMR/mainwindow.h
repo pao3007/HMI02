@@ -97,6 +97,17 @@ public:
 
 int processThisCamera(cv::Mat cameraData);
 
+cv::Mat detectCircle(cv::Mat image);
+int pole[4], xObject, yObject;
+QPoint findObject();
+cv::Mat newImage;
+bool search=false, convert=false;
+int checkAngle(int gyroAngle);
+bool finder=false;
+int iter=0;
+void startSearching();
+QPoint objectPoint;
+
 private slots:
     void on_pushButton_9_clicked();
 
