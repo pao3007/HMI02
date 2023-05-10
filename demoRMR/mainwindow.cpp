@@ -18,8 +18,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
 
     //tu je napevno nastavena ip. treba zmenit na to co ste si zadali do text boxu alebo nejaku inu pevnu. co bude spravna
-    //ipaddress="127.0.0.1";
-    ipaddress="192.168.1.14";//192.168.1.11toto je na niektory realny robot.. na lokal budete davat "127.0.0.1"
+    ipaddress="127.0.0.1";
+    //ipaddress="192.168.1.14";//192.168.1.11toto je na niektory realny robot.. na lokal budete davat "127.0.0.1"
   //  cap.open("http://192.168.1.11:8000/stream.mjpg");
     ui->setupUi(this);
     datacounter=0;
@@ -45,12 +45,6 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete ui;
-}
-//---------moj kod pre funkcie pouzivane pre hladanie kruhu-----------------------//
-
-void MainWindow::startSearching(){
-    search=true;
-    finder=true;
 }
 
 cv::Mat MainWindow::detectCircle(cv::Mat image)
@@ -83,8 +77,9 @@ QPoint MainWindow::findObject(){
     cout<<"zavolala sa funkcia na detekciu ";
     QPoint point2;
     convert=true;
+    detectCircle(newImage);
     if(pole[2]==1){
-        detectCircle(newImage);
+
         int pointX = pole[0];
         int highX = pointX+10;
         int lowX = pointX-10;
@@ -129,7 +124,6 @@ int MainWindow::checkAngle(int gyroAngle){
     }
     return checkAngle/100;
 }
-//---------koniec mojho kodu-----------------------------------------------------//
 
 void MainWindow::paintEvent(QPaintEvent *event)
 {
@@ -137,17 +131,31 @@ void MainWindow::paintEvent(QPaintEvent *event)
     QSize size = this->size();
     static int previousHeight = 0;
     static int previousWidth = 0;
-
-    //---------moj kod kde beriem obraz s kameri a hladam na nom kruh----------------//
-    QImage image = QImage((uchar*)frame[actIndex].data, frame[actIndex].cols, frame[actIndex].rows, frame[actIndex].step, QImage::Format_RGB888  );//kopirovanie cvmat do qimage
-    QImage im2 = image;
-    if(convert){
-    cv::Mat ni(image.height(), image.width(), CV_8UC3, (cv::Scalar*)image.scanLine(0));
-    newImage = ni;
-    }
-    //---------koniec mojho kodu-----------------------------------------------------//
     ///prekreslujem obrazovku len vtedy, ked viem ze mam nove data. paintevent sa
     /// moze pochopitelne zavolat aj z inych dovodov, napriklad zmena velkosti okna
+    ///
+    ///
+    ///
+    ///
+
+    //kopirovanie cvmat do qimage
+
+
+
+    if(actIndex>-1)
+    {
+        image = QImage((uchar*)frame[actIndex].data, frame[actIndex].cols, frame[actIndex].rows, frame[actIndex].step, QImage::Format_RGB888  );//kopirovanie cvmat do qimage
+            QImage im2 = image;
+            if(convert){
+            cv::Mat ni(image.height(), image.width(), CV_8UC3, (cv::Scalar*)image.scanLine(0));
+            newImage = ni;
+            }
+
+
+    }
+
+
+
     painter.setBrush(Qt::black);//cierna farba pozadia(pouziva sa ako fill pre napriklad funkciu drawRect)
     QPen pero;
     pero.setStyle(Qt::SolidLine);//styl pera - plna ciara
@@ -211,12 +219,7 @@ void MainWindow::paintEvent(QPaintEvent *event)
 
 
 
-    if(actIndex>-1)/// ak zobrazujem data z kamery a aspon niektory frame vo vectore je naplneny
-    {
-        image = QImage((uchar*)frame[actIndex].data, frame[actIndex].cols, frame[actIndex].rows, frame[actIndex].step, QImage::Format_RGB888  );//kopirovanie cvmat do qimage
 
-
-    }
 
     if(!mapaImageOrig.isNull()){
         QImage mapaImage = mapaImageOrig;
@@ -262,6 +265,45 @@ void MainWindow::paintEvent(QPaintEvent *event)
 
         QColor color0 = Qt::black;
 
+
+         for(int k=0;k<copyOfLaserData.numberOfScans;k++){
+             if(((copyOfLaserData.Data[k].scanDistance/1000) < 0.50) && (copyOfLaserData.Data[k].scanDistance/1000) != 0 && (k < 35 || k > 240)){
+                 float scanDist = copyOfLaserData.Data[k].scanDistance / 1000;
+                 float pi1 = 3.14159;
+                 float lidarAngle = copyOfLaserData.Data[k].scanAngle * (pi1/180.0);
+                 float calAngle = mojRobot.angle - lidarAngle;
+                 if(calAngle > 6.283185) calAngle -= 6.283185;
+
+
+                 int px1l = ((polohaRobota.x + (int)((mojRobot.x + scanDist*cos(calAngle))/0.05)) * scale);
+                 int py1l = ((polohaRobota.y + (int)((mojRobot.y + scanDist*sin(calAngle))/0.05)) * scale2 + offsetImg);
+
+                 pero.setWidth(2);//hrubka pera -3pixely
+                 pero.setColor(Qt::cyan);//farba je zelena
+                 painterMap.setPen(pero);
+
+                 painterMap.drawPoint(px1l,py1l);
+             }
+
+
+
+         }
+
+         if(!objectPoint.isNull()){
+             int px1l = ((polohaRobota.x + objectPoint.x()/50) * scale);
+             int py1l = ((polohaRobota.y + objectPoint.y()/50) * scale2 + offsetImg);
+             pero.setWidth(2);//hrubka pera -3pixely
+             pero.setColor(Qt::magenta);//farba je zelena
+             painterMap.setPen(pero);
+
+             int sizeXc = 12;
+             int sizeYc = 8;
+
+             painterMap.drawEllipse(px1l-(sizeXc/2),py1l-(sizeYc/2),sizeXc,sizeYc);
+         }
+
+
+
         if(pushBtnImg){
             ///cout << "Mapa" << endl;
             color0 = Qt::white;
@@ -304,11 +346,28 @@ void MainWindow::paintEvent(QPaintEvent *event)
             help = size.height()-106;
             painter.drawLine(24,help,67,help);
 
+            batteryLevel = std::round(batteryLevel*100);
+
             help = size.height()-80;
-            QString s = "";
-            s.append(char(robotdata.Battery));
+            QString s = QString("%1").arg(batteryLevel);
             s.append("%");
-            painter.drawText(40,help,s);
+            painter.drawText(37,help,s);
+
+            if(mojRobot.stop){
+                QFont font = painter.font();
+                font.setPixelSize(50);
+                painter.setFont(font);
+                pero.setColor(Qt::red);
+                painter.setPen(pero);
+                painter.drawText(20,size.height()-450,500,500, 0, tr("WARNING!"));
+                font.setPixelSize(30);painter.setFont(font);
+                painter.drawText(20,size.height()-400,500,500, 0, tr("Obstacle in the way"));
+
+
+
+            }
+
+
 
 
 
@@ -336,94 +395,7 @@ void  MainWindow::setUiValues(double robotX,double robotY,double robotFi)
 /// vola sa vzdy ked dojdu nove data z robota. nemusite nic riesit, proste sa to stane
 int MainWindow::processThisRobot(TKobukiData robotdata)
 {
-    cout << int(robotdata.Battery) << endl;
-
-    //---------moj kod pre prehladavanie priestoru-------------------------//
-    //spusta sa pomocou funkcie startSearching() funkciu je potrebne zavolat
-    //vzdy ked robot dosiahne bod v ktorom prehladava priestor.
-
-    //po spusteni netreba riesit nic dalej
-
-    //pokial najde kruh jeho suradnice zaznaci do globalenj premennej objectPoint()
-    //k suradniciam objektu je potrebne priratat x-ovu a y-ovu poziciu robota
-    //pokial ju chceme zakreslit do mapy
-
-    if(search){
-
-            int inigyro = checkAngle(robotdata.GyroAngle);
-
-            if(inigyro<180){
-                robot.setRotationSpeed(-0.2);
-            }else{
-                robot.setRotationSpeed(0.2);
-            }
-
-            if(finder&&(checkAngle(robotdata.GyroAngle)<2||checkAngle(robotdata.GyroAngle)>358)){
-                robot.setRotationSpeed(0);
-                objectPoint = findObject();
-                finder=false;
-
-            }else if(!finder&&iter==0){
-                robot.setRotationSpeed(0.5);
-                cout<<"\n som v kroku "<<iter;
-                if(checkAngle(robotdata.GyroAngle)>62&&checkAngle(robotdata.GyroAngle)<66){
-                    robot.setRotationSpeed(0);
-                    objectPoint = findObject();
-                    iter = 1;
-                }
-            }else if(!finder&&iter==1){
-                robot.setRotationSpeed(0.5);
-                cout<<"\n som v kroku "<<iter;
-                if(checkAngle(robotdata.GyroAngle)>126&&checkAngle(robotdata.GyroAngle)<130){
-                    robot.setRotationSpeed(0);
-                    objectPoint = findObject();
-                    iter = 2;
-                }
-            }else if(!finder&&iter==2){
-                robot.setRotationSpeed(0.5);
-                cout<<"\n som v kroku "<<iter;
-                if(checkAngle(robotdata.GyroAngle)>190&&checkAngle(robotdata.GyroAngle)<192){
-                    robot.setRotationSpeed(0);
-                    objectPoint = findObject();
-                    iter = 3;
-                }
-            }else if(!finder&&iter==3){
-                robot.setRotationSpeed(0.2);
-                cout<<"\n som v kroku "<<iter;
-                if(checkAngle(robotdata.GyroAngle)>254&&checkAngle(robotdata.GyroAngle)<258){
-                    robot.setRotationSpeed(0);
-                    objectPoint = findObject();
-                    iter = 4;
-                }
-            }else if(!finder&&iter==4){
-                robot.setRotationSpeed(0.5);
-                cout<<"\n som v kroku "<<iter;
-                if(checkAngle(robotdata.GyroAngle)>318&&checkAngle(robotdata.GyroAngle)<322){
-                    robot.setRotationSpeed(0);
-                    objectPoint = findObject();
-                    iter = 5;
-                }
-            }else if(!finder&&iter==5){
-                robot.setRotationSpeed(0.5);
-                cout<<"\n som v kroku "<<iter;
-                if(checkAngle(robotdata.GyroAngle)>22&&checkAngle(robotdata.GyroAngle)<26){
-                    robot.setRotationSpeed(0);
-                    objectPoint = findObject();
-                    iter = 0;
-                    search = false;
-                }
-
-            }
-            cout<<endl<<search;
-            if(!search){
-                robot.setRotationSpeed(0);
-            }
-
-        }
-    //vyssie uvedena funkcionalita bude realizovana iba pokial je zavolana funkcia start search
-    //bolo by dobre asi zvysok kodu nastavit tak ze pokial tam mas nejake procesy ktore sa deju stale
-    //tak ked sa ma diat proces hladania ostatne by sa mali vypnut aby sa tam nebil ten pohyb robota
-    //-------------koniec mojho kodu------------------------------------------------------------------//
+    battery = robotdata.Battery/255.0;
 
     static bool start = true;
     static int previousEncoderLeft = robotdata.EncoderLeft, previousEncoderRight = robotdata.EncoderRight;
@@ -444,6 +416,7 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
     double diameter = 0.23;
     double pi1 = 3.14159265359;
     double finish = 0.05;
+    static double e_fi = 0, e_pos = 0;
 
 
 
@@ -451,6 +424,81 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
     polohaRobota.x = zaciatok.x + int(x/0.05);
     polohaRobota.y = zaciatok.y + int(y/0.05);
     ///cout << polohaRobota.x << " " << polohaRobota.y << endl;
+    ///
+    if(search){
+
+             int inigyro = checkAngle(robotdata.GyroAngle);
+
+             if(inigyro<180){
+                 robot.setRotationSpeed(-0.2);
+             }else{
+                 robot.setRotationSpeed(0.2);
+             }
+
+             if(finder&&(checkAngle(robotdata.GyroAngle)<2||checkAngle(robotdata.GyroAngle)>358)){
+                 robot.setRotationSpeed(0);
+                 objectPoint = findObject();
+                 finder=false;
+
+             }else if(!finder&&iter==0){
+                 robot.setRotationSpeed(0.5);
+                 cout<<"\n som v kroku "<<iter;
+                 if(checkAngle(robotdata.GyroAngle)>62&&checkAngle(robotdata.GyroAngle)<66){
+                     robot.setRotationSpeed(0);
+                     objectPoint = findObject();
+                     iter = 1;
+                 }
+             }else if(!finder&&iter==1){
+                 robot.setRotationSpeed(0.5);
+                 cout<<"\n som v kroku "<<iter;
+                 if(checkAngle(robotdata.GyroAngle)>126&&checkAngle(robotdata.GyroAngle)<130){
+                     robot.setRotationSpeed(0);
+                     objectPoint = findObject();
+                     iter = 2;
+                 }
+             }else if(!finder&&iter==2){
+                 robot.setRotationSpeed(0.5);
+                 cout<<"\n som v kroku "<<iter;
+                 if(checkAngle(robotdata.GyroAngle)>190&&checkAngle(robotdata.GyroAngle)<192){
+                     robot.setRotationSpeed(0);
+                     objectPoint = findObject();
+                     iter = 3;
+                 }
+             }else if(!finder&&iter==3){
+                 robot.setRotationSpeed(0.2);
+                 cout<<"\n som v kroku "<<iter;
+                 if(checkAngle(robotdata.GyroAngle)>254&&checkAngle(robotdata.GyroAngle)<258){
+                     robot.setRotationSpeed(0);
+                     objectPoint = findObject();
+                     iter = 4;
+                 }
+             }else if(!finder&&iter==4){
+                 robot.setRotationSpeed(0.5);
+                 cout<<"\n som v kroku "<<iter;
+                 if(checkAngle(robotdata.GyroAngle)>318&&checkAngle(robotdata.GyroAngle)<322){
+                     robot.setRotationSpeed(0);
+                     objectPoint = findObject();
+                     iter = 5;
+                 }
+             }else if(!finder&&iter==5){
+                 robot.setRotationSpeed(0.5);
+                 cout<<"\n som v kroku "<<iter;
+                 if(checkAngle(robotdata.GyroAngle)>22&&checkAngle(robotdata.GyroAngle)<26){
+                     robot.setRotationSpeed(0);
+                     objectPoint = findObject();
+                     iter = 0;
+                     search = false;
+                 }
+
+             }
+             cout<<endl<<search;
+             if(!search){
+                 robot.setRotationSpeed(0);
+                 ulohy.erase(ulohy.begin());
+                 novaTrasa = true;
+             }
+
+         }
 
 
 
@@ -669,10 +717,18 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
         Index start;
         start.x = zaciatok.x;
         start.y = zaciatok.y;
+
+        while(!qyr.empty()){
+            qyr.pop();
+            qxr.pop();
+        }
+
+
         for(int i = 0; i < pathPoints.size();i++){
            double testX = pathPoints[i].x*cellSize-start.x*cellSize;
            double testY = pathPoints[i].y*cellSize-start.y*cellSize;
            cout << testX << " | " << testY << endl;
+
            qyr.push(testY);
            qxr.push(testX);
 
@@ -681,10 +737,10 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
 
 
         //////////////////
-        ofstream occGridALG("C:/Users/lukac/Desktop/HMI/HMI02/occGridALG.txt");
-        ofstream occGridALG2("C:/Users/lukac/Desktop/HMI/HMI02/occGridALG2.txt");
-        ///ofstream occGridALG("C:/Users/pao/Desktop/HMI/HMI02/HMI02/occGridALG.txt");
-        ///ofstream occGridALG2("C:/Users/pao/Desktop/HMI/HMI02/HMI02/occGridALG2.txt");
+        ///ofstream occGridALG("C:/Users/lukac/Desktop/HMI/HMI02/occGridALG.txt");
+        ///ofstream occGridALG2("C:/Users/lukac/Desktop/HMI/HMI02/occGridALG2.txt");
+        ofstream occGridALG("C:/Users/pao/Desktop/kurva/dsa/occGridALG.txt");
+        ofstream occGridALG2("C:/Users/pao/Desktop/kurva/dsa/occGridALG2.txt");
         printf("Zapisujem do mapy");
 
         for (int i = 0; i < mapa[0].size(); i++) {
@@ -819,7 +875,7 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
 
             //printf("\n%d",mojRobot.stop);
 
-
+        if(!search){
             ///POLOHOVANIE
             if(!mojRobot.stop && !pause){
                 ///cout << "POLOHOVANIE" << endl;
@@ -834,7 +890,7 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
 
                 fi = atan2(yr-y,xr-x);
 
-                double e_fi = fi - rads;
+                e_fi = fi - rads;
                 if(e_fi > (6.283185/2)){
                     e_fi -= 6.283185;
                 }else if(e_fi < (-6.283185/2)){
@@ -842,7 +898,7 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
                 }
 
 
-                float e_pos =sqrt(pow((xr-x),2)+pow((yr-y),2));
+                e_pos =sqrt(pow((xr-x),2)+pow((yr-y),2));
                 odchylka_pol = e_pos;
                 float translation_reg = Pt * e_pos + 50;
                 if(e_fi != 0){
@@ -868,8 +924,18 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
                             qxr.pop();
                             mojRobot.numOfPoints = qxr.size();
                             if(qyr.empty() && navigujem && !ulohy.empty()){
-                                ulohy.erase(ulohy.begin());
-                                novaTrasa = true;
+
+                                if(ulohy.front().hladaj){
+                                    novaTrasa = false;
+                                    search=true;
+                                    finder=true;
+                                }else{
+                                    novaTrasa = true;
+                                    ulohy.erase(ulohy.begin());
+                                }
+
+
+
                                 if(ulohy.empty()){
                                     start_stop = false;
                                     navigujem = false;
@@ -918,12 +984,44 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
                     }
                     if(abs(e_fi) < 0.03) centered = true;
                 }
-        }else{
+            }else if(!ulohy.empty()){
                 translation -= 50;
                 if (translation < 0) translation = 0;
-                robot.setArcSpeed(translation,arc_reg);
+                if(translation > 0) robot.setArcSpeed(translation,arc_reg);
+
+                if(translation == 0){
+
+                    if(!qyr.empty()){
+                        yr = qyr.front();
+                        xr = qxr.front();
+                        // cout << xr << " + " << yr << endl;
+                    }
+
+
+
+                    fi = atan2(yr-y,xr-x);
+
+                    double e_fi = fi - rads;
+                    if(e_fi > (6.283185/2)){
+                        e_fi -= 6.283185;
+                    }else if(e_fi < (-6.283185/2)){
+                        e_fi +=6.283185;
+                    }
+
+                    double rotacia = Pr*e_fi;
+                    if(abs(e_fi) > 0.03){
+                        if(rotacia > 3.14159/3) rotacia = 3.14159/3;
+                        if(rotacia < -3.14159/3) rotacia = -3.14159/3;
+
+                        robot.setRotationSpeed(rotacia);
+                    }else robot.setRotationSpeed(0);
+
+
+
+                }
                 ///printf("\nEMERGENCY STOP");
             }
+        }
 
 
 
@@ -937,6 +1035,8 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
         mojRobot.x = x;
         mojRobot.y = y;
         mojRobot.translation = translation;
+
+        cout << e_fi << endl;
 
 
 
@@ -957,7 +1057,7 @@ int MainWindow::processThisLidar(LaserMeasurement laserData)
     int i = 0;
     for(int k=0;k<copyOfLaserData.numberOfScans;k++){
 
-        ///if(((copyOfLaserData.Data[k].scanDistance/1000) < 0.23) && (copyOfLaserData.Data[k].scanDistance/1000) != 0 && (k < 50 || k > 225))i++;
+        if(((copyOfLaserData.Data[k].scanDistance/1000) < 0.40) && (copyOfLaserData.Data[k].scanDistance/1000) != 0 && (k < 40 || k > 235))i++;
        ///if(copyOfLaserData.Data[k].scanAngle > 88 && copyOfLaserData.Data[k].scanAngle < 92) cout << copyOfLaserData.Data[k].scanDistance/1000 << endl;
     }
     if(i > 0){
@@ -1000,7 +1100,7 @@ void MainWindow::on_pushButton_9_clicked() //start button
         robot.setLaserParameters(ipaddress,52999,5299,/*[](LaserMeasurement dat)->int{std::cout<<"som z lambdy callback"<<std::endl;return 0;}*/std::bind(&MainWindow::processThisLidar,this,std::placeholders::_1));
         robot.setRobotParameters(ipaddress,53000,5300,std::bind(&MainWindow::processThisRobot,this,std::placeholders::_1));
         //---simulator ma port 8889, realny robot 8000
-        robot.setCameraParameters("http://"+ipaddress+":8000/stream.mjpg",std::bind(&MainWindow::processThisCamera,this,std::placeholders::_1));
+        robot.setCameraParameters("http://"+ipaddress+":8889/stream.mjpg",std::bind(&MainWindow::processThisCamera,this,std::placeholders::_1));
 
         ///ked je vsetko nasetovane tak to tento prikaz spusti (ak nieco nieje setnute,tak to normalne nenastavi.cize ak napr nechcete kameru,vklude vsetky info o nej vymazte)
         robot.robotStart();
@@ -1020,8 +1120,8 @@ void MainWindow::on_pushButton_9_clicked() //start button
         );
     ///////////////////////////////////////////////////////////////////////////////
         std::string eachrow;
-        std::ifstream myfile("C:/Users/lukac/Desktop/HMI/HMI02/idealOccGrid2.txt");
-        ///std::ifstream myfile("C:\\Users\\pao\\Desktop\\HMI\\HMI02\\HMI02\\idealOccGrid2.txt");
+        ///std::ifstream myfile("C:/Users/lukac/Desktop/HMI/HMI02/idealOccGrid2.txt");
+        std::ifstream myfile("C:/Users/pao/Desktop/kurva/dsa/idealOccGrid2.txt");
         int check = 0;
 
 
@@ -1175,8 +1275,19 @@ void MainWindow::on_pushButton_image_clicked() //stop
 
 void MainWindow::on_pushButton_rem_clicked()
 {
-    if(!ulohy.empty()){
+    if(!ulohy.empty() && pause){
         ulohy.pop_back();
+    }
+
+    if(ulohy.empty()){
+        start_stop = false;
+        navigujem = false;
+        pause = true;
+        novaTrasa = false;
+        ui->pushButton_9->setText("NO POINTS SELECTED");
+        ui->label->setText("PLEASE SELECT TASKS ON MAP");
+
+
     }
 }
 

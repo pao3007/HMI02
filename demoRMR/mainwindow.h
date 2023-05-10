@@ -105,7 +105,6 @@ bool search=false, convert=false;
 int checkAngle(int gyroAngle);
 bool finder=false;
 int iter=0;
-void startSearching();
 QPoint objectPoint;
 
 private slots:
@@ -153,6 +152,7 @@ private:
      vector<Index> path;
      vector<Index> pathPoints;
      float odchylka_pol;
+     float battery;
 
 
      QJoysticks *instance;
