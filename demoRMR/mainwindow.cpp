@@ -18,8 +18,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
 
     //tu je napevno nastavena ip. treba zmenit na to co ste si zadali do text boxu alebo nejaku inu pevnu. co bude spravna
-    ipaddress="127.0.0.1";
-    //ipaddress="192.168.1.14";//192.168.1.11toto je na niektory realny robot.. na lokal budete davat "127.0.0.1"
+   ipaddress="127.0.0.1";
+    ///ipaddress="192.168.1.11";//192.168.1.11toto je na niektory realny robot.. na lokal budete davat "127.0.0.1"
   //  cap.open("http://192.168.1.11:8000/stream.mjpg");
     ui->setupUi(this);
     datacounter=0;
@@ -47,11 +47,11 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-cv::Mat MainWindow::detectCircle(cv::Mat image)
+cv::Mat MainWindow::detectCircle(cv::Mat image2)
 {
-    cout << "zavolala sa funkcia na detekciu";
+    cout << "zavolala sa funkcia na detekciu detectCircle";
     cv::Mat gray;
-    cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+    cvtColor(image2, gray, cv::COLOR_BGR2GRAY);
     medianBlur(gray, gray, 5);
     vector<cv::Vec3f> circles;
     HoughCircles(gray, circles, cv::HOUGH_GRADIENT_ALT, 1, gray.rows/16, 90, 0.9, 20, 100);
@@ -61,20 +61,20 @@ cv::Mat MainWindow::detectCircle(cv::Mat image)
         cv::Point center = cv::Point(c[0], c[1]);
 
         // circle center
-        cv::circle( image, center, 1,cv::Scalar(0,100,100), 3, cv::LINE_AA);
+        cv::circle( image2, center, 1,cv::Scalar(0,100,100), 3, cv::LINE_AA);
         // circle outline
         int radius = c[2];
-        cv::circle( image, center, radius, cv::Scalar(0,0,255), 5, cv::LINE_AA);
+        cv::circle( image2, center, radius, cv::Scalar(0,0,255), 5, cv::LINE_AA);
         std::cout << c[0] << c[1] << c[2] <<"mamkruh\n\n";
         pole[0]=c[0];//x
         pole[1]=c[1];//y
         pole[2] = 1;
     }
-return image;
+return image2;
 }
 
 QPoint MainWindow::findObject(){
-    cout<<"zavolala sa funkcia na detekciu ";
+    cout<<"zavolala sa funkcia na detekciu findObject()";
     QPoint point2;
     convert=true;
     detectCircle(newImage);
@@ -267,16 +267,16 @@ void MainWindow::paintEvent(QPaintEvent *event)
 
 
          for(int k=0;k<copyOfLaserData.numberOfScans;k++){
-             if(((copyOfLaserData.Data[k].scanDistance/1000) < 0.50) && (copyOfLaserData.Data[k].scanDistance/1000) != 0 && (k < 35 || k > 240)){
-                 float scanDist = copyOfLaserData.Data[k].scanDistance / 1000;
+             if(((copyOfLaserData.Data[k].scanDistance/1000) < 0.40) && (copyOfLaserData.Data[k].scanDistance/1000) > 0.10 && (k < 35 || k > 240)){
+                 float scanDist = (copyOfLaserData.Data[k].scanDistance / 1000)+0.1;
                  float pi1 = 3.14159;
                  float lidarAngle = copyOfLaserData.Data[k].scanAngle * (pi1/180.0);
                  float calAngle = mojRobot.angle - lidarAngle;
                  if(calAngle > 6.283185) calAngle -= 6.283185;
 
 
-                 int px1l = ((polohaRobota.x + (int)((mojRobot.x + scanDist*cos(calAngle))/0.05)) * scale);
-                 int py1l = ((polohaRobota.y + (int)((mojRobot.y + scanDist*sin(calAngle))/0.05)) * scale2 + offsetImg);
+                 int px1l = ((polohaRobota.x + (int)((scanDist*cos(calAngle))/0.05)) * scale);
+                 int py1l = ((polohaRobota.y + (int)((scanDist*sin(calAngle))/0.05)) * scale2 + offsetImg);
 
                  pero.setWidth(2);//hrubka pera -3pixely
                  pero.setColor(Qt::cyan);//farba je zelena
@@ -334,7 +334,7 @@ void MainWindow::paintEvent(QPaintEvent *event)
 
 
 
-            float batteryLevel = 0.5;
+            float batteryLevel = battery;
             painter.fillRect(27,size.height()-85-47+90*(1-batteryLevel),40,90*batteryLevel,Qt::green);
 
             pero.setStyle(Qt::SolidLine);//styl pera - plna ciara
@@ -737,10 +737,10 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
 
 
         //////////////////
-        ///ofstream occGridALG("C:/Users/lukac/Desktop/HMI/HMI02/occGridALG.txt");
-        ///ofstream occGridALG2("C:/Users/lukac/Desktop/HMI/HMI02/occGridALG2.txt");
-        ofstream occGridALG("C:/Users/pao/Desktop/kurva/dsa/occGridALG.txt");
-        ofstream occGridALG2("C:/Users/pao/Desktop/kurva/dsa/occGridALG2.txt");
+        ofstream occGridALG("C:/Users/lukac/Desktop/FINALHMI/HMI02/occGridALG.txt");
+        ofstream occGridALG2("C:/Users/lukac/Desktop/FINALHMI/HMI02/occGridALG2.txt");
+        ///ofstream occGridALG("C:/Users/pao/Desktop/kurva/dsa/occGridALG.txt");
+        ///ofstream occGridALG2("C:/Users/pao/Desktop/kurva/dsa/occGridALG2.txt");
         printf("Zapisujem do mapy");
 
         for (int i = 0; i < mapa[0].size(); i++) {
@@ -1036,9 +1036,9 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
         mojRobot.y = y;
         mojRobot.translation = translation;
 
-        cout << e_fi << endl;
-
-
+       /// cout << e_fi << endl;
+       double p1l = 3.14159265359;
+        cout << "x: " << x << " y: " << y << " |" << rads*(180/p1l) << " gyro: " << robotdata.GyroAngle/100 << endl;
 
         return 0;
 
@@ -1057,14 +1057,14 @@ int MainWindow::processThisLidar(LaserMeasurement laserData)
     int i = 0;
     for(int k=0;k<copyOfLaserData.numberOfScans;k++){
 
-        if(((copyOfLaserData.Data[k].scanDistance/1000) < 0.40) && (copyOfLaserData.Data[k].scanDistance/1000) != 0 && (k < 40 || k > 235))i++;
+        if(((copyOfLaserData.Data[k].scanDistance/1000) < 0.23) && (copyOfLaserData.Data[k].scanDistance/1000) > 0.10 && (k < 40 || k > 235))i++;
        ///if(copyOfLaserData.Data[k].scanAngle > 88 && copyOfLaserData.Data[k].scanAngle < 92) cout << copyOfLaserData.Data[k].scanDistance/1000 << endl;
     }
     if(i > 0){
         mojRobot.stop = true;
     }else mojRobot.stop = false;
 
-    //update();//tento prikaz prinuti prekreslit obrazovku.. zavola sa paintEvent funkcia
+    update();//tento prikaz prinuti prekreslit obrazovku.. zavola sa paintEvent funkcia
 
 
     return 0;
@@ -1079,7 +1079,7 @@ int MainWindow::processThisCamera(cv::Mat cameraData)
     cameraData.copyTo(frame[(actIndex+1)%3]);//kopirujem do nasej strukury
     actIndex=(actIndex+1)%3;//aktualizujem kde je nova fotka
     updateLaserPicture=1;
-    update();
+    ///update();
     return 0;
 }
 void MainWindow::on_pushButton_9_clicked() //start button
@@ -1120,8 +1120,8 @@ void MainWindow::on_pushButton_9_clicked() //start button
         );
     ///////////////////////////////////////////////////////////////////////////////
         std::string eachrow;
-        ///std::ifstream myfile("C:/Users/lukac/Desktop/HMI/HMI02/idealOccGrid2.txt");
-        std::ifstream myfile("C:/Users/pao/Desktop/kurva/dsa/idealOccGrid2.txt");
+        std::ifstream myfile("C:/Users/lukac/Desktop/FINALHMI/HMI02/idealOccGrid2.txt");
+        ///std::ifstream myfile("C:/Users/pao/Desktop/kurva/dsa/idealOccGrid2.txt");
         int check = 0;
 
 
@@ -1182,6 +1182,7 @@ void MainWindow::on_pushButton_9_clicked() //start button
                }
 
            }
+        pushBtnImg = true;
         start = true;
 
     }
